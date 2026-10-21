@@ -233,20 +233,20 @@ export const roadmapApi = {
 };
 
 // ─── Certificates ─────────────────────────────────────────────────────────────
-// Gateway routes: /certificates/** → certificate-service (integrated in backend)
+// Gateway routes: /certificate/** → certificate-service (integrated in backend)
+// NOTE: Backend uses singular /certificate/* not plural /certificates/*
+// NOTE: Backend uses X-User-Id header for authentication (set by interceptor)
 export const certificateApi = {
   upload: (file: File, userId: number) => {
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('userId', userId.toString());
-    return api.post('/certificates/upload', fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // userId is sent via X-User-Id header by the interceptor, not in form data
+    return api.post('/certificate/upload', fd);
   },
-  get: (id: number) => api.get(`/certificates/${id}`),
-  getResult: (id: number) => api.get(`/certificates/${id}/result`),
+  get: (id: number) => api.get(`/certificate/${id}`),
+  getResult: (id: number) => api.get(`/certificate/${id}`),
   getUserCertificates: (userId: number, page: number, size: number) =>
-    api.get(`/certificates/user/${userId}?page=${page}&size=${size}`),
+    api.get(`/certificate/user?page=${page}&size=${size}`),
 };
 
 

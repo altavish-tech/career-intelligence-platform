@@ -59,9 +59,27 @@ export default function FloatingChatBot({
         const history = await chatBotAPI.getHistory(session.sessionId);
         setMessages(history.messages);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to initialize session:', error);
-      toast.error('Failed to start chat session');
+      
+      // Check if backend is unavailable
+      const isBackendUnavailable = error.code === 'ERR_NETWORK' || 
+                                   error.code === 'ECONNREFUSED' ||
+                                   error.response?.status === 404 ||
+                                   error.response?.status === 500;
+      
+      if (isBackendUnavailable) {
+        // Show welcome message explaining the feature is coming soon
+        const welcomeMessage: ChatMessage = {
+          role: 'ASSISTANT',
+          content: '👋 Welcome! The AI chatbot feature is currently under development and will be available soon. We\'re working hard to bring you intelligent assistance across the platform!',
+          messageType: 'SYSTEM',
+          createdAt: new Date().toISOString(),
+        };
+        setMessages([welcomeMessage]);
+      } else {
+        toast.error('Failed to start chat session');
+      }
     }
   };
 
@@ -71,6 +89,12 @@ export default function FloatingChatBot({
       setSuggestions(response.suggestions);
     } catch (error) {
       console.error('Failed to load suggestions:', error);
+      // Set default suggestions when backend is unavailable
+      setSuggestions([
+        'Tell me about this platform',
+        'How do I get started?',
+        'What features are available?'
+      ]);
     }
   };
 
@@ -117,16 +141,28 @@ export default function FloatingChatBot({
     } catch (error: any) {
       console.error('Failed to send message:', error);
       
-      // Show error message in chat
+      // Check if it's a network error or backend not available
+      const isBackendUnavailable = error.code === 'ERR_NETWORK' || 
+                                   error.code === 'ECONNREFUSED' ||
+                                   error.response?.status === 404 ||
+                                   error.response?.status === 500;
+      
+      // Show appropriate error message
       const errorMessage: ChatMessage = {
         role: 'ASSISTANT',
-        content: error.response?.data?.message || 'Sorry, I encountered an error. Please try again.',
+        content: isBackendUnavailable 
+          ? 'The AI chatbot service is currently unavailable. This feature is coming soon! In the meantime, you can explore the platform or contact support for assistance.'
+          : (error.response?.data?.message || 'Sorry, I encountered an error. Please try again.'),
         messageType: 'ERROR',
         createdAt: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMessage]);
       
-      toast.error('Failed to send message');
+      if (isBackendUnavailable) {
+        toast.error('Chatbot service unavailable');
+      } else {
+        toast.error('Failed to send message');
+      }
     } finally {
       setIsLoading(false);
     }

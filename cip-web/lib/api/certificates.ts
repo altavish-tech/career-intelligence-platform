@@ -1,7 +1,10 @@
 // lib/api/certificates.ts
-// Certificate API client — connects to certificate-service (port 8089)
+// Certificate API client — connects to backend (port 8080)
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8089';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+// IMPORTANT: Backend uses singular /certificate/* not plural /certificates/*
+// IMPORTANT: Backend uses X-User-Id header for authentication
 
 export interface UploadResponse {
   certificateId: number;
@@ -92,10 +95,10 @@ export interface UserCertificatesResponse {
 }
 
 function getAuthHeader(): Record<string, string> {
-  const token = typeof window !== 'undefined' 
-    ? localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
-    : null;
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  const userId = typeof window !== 'undefined' 
+    ? localStorage.getItem('userId') || '1'
+    : '1';
+  return { 'X-User-Id': userId };
 }
 
 async function apiRequest<T>(
@@ -121,6 +124,7 @@ async function apiRequest<T>(
 
 /**
  * Upload a certificate file for validation
+ * Note: userId is sent via X-User-Id header (handled by getAuthHeader)
  */
 export async function uploadCertificate(
   file: File,
@@ -128,11 +132,14 @@ export async function uploadCertificate(
 ): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('userId', userId.toString());
 
-  return apiRequest<UploadResponse>('/certificates/upload', {
+  // Override the default auth header to use the provided userId
+  return apiRequest<UploadResponse>('/certificate/upload', {
     method: 'POST',
     body: formData,
+    headers: {
+      'X-User-Id': userId.toString()
+    }
   });
 }
 
@@ -142,7 +149,7 @@ export async function uploadCertificate(
 export async function getCertificate(
   certificateId: number
 ): Promise<CertificateResponse> {
-  return apiRequest<CertificateResponse>(`/certificates/${certificateId}`);
+  return apiRequest<CertificateResponse>(`/certificate/${certificateId}`);
 }
 
 /**
@@ -151,19 +158,22 @@ export async function getCertificate(
 export async function getCertificateResult(
   certificateId: number
 ): Promise<CertificateResult> {
-  return apiRequest<CertificateResult>(`/certificates/${certificateId}/result`);
+  return apiRequest<CertificateResult>(`/certificate/${certificateId}`);
 }
 
 /**
  * Get all certificates for a user (paginated)
+ * Note: userId is sent via X-User-Id header (handled by getAuthHeader)
  */
 export async function getUserCertificates(
   userId: number,
   page = 0,
   size = 10
 ): Promise<UserCertificatesResponse> {
+  // userId parameter is kept for backward compatibility but not used
+  // The actual userId comes from X-User-Id header set by getAuthHeader()
   return apiRequest<UserCertificatesResponse>(
-    `/certificates/user/${userId}?page=${page}&size=${size}`
+    `/certificate/user?page=${page}&size=${size}`
   );
 }
 
@@ -201,7 +211,7 @@ export async function pollForResult(
 export async function deleteCertificate(
   certificateId: number
 ): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>(`/certificates/${certificateId}`, {
+  return apiRequest<{ message: string }>(`/certificate/${certificateId}`, {
     method: 'DELETE',
   });
 }

@@ -11,8 +11,9 @@ export default function JobCard({ job }: Props) {
   const matchBg    = job.match >= 80 ? 'rgba(74,222,128,0.15)' : job.match >= 60 ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)';
 
   // Use matchedSkills and missingSkills from backend if available
-  const matchedSkills = job.matchedSkills ?? job.skills.slice(0, Math.ceil(job.skills.length * (job.match / 100)));
-  const missingSkills = job.missingSkills ?? job.skills.filter(s => !matchedSkills.includes(s));
+  const skillsArray = Array.isArray(job.skills) ? job.skills : [];
+  const matchedSkills = job.matchedSkills ?? skillsArray.slice(0, Math.ceil(skillsArray.length * (job.match / 100)));
+  const missingSkills = job.missingSkills ?? skillsArray.filter(s => !matchedSkills.includes(s));
 
   // Fix URL: Use applyLink if available, otherwise use url (but not if it's "local_dataset")
   const jobUrl = job.applyLink || (job.url !== 'local_dataset' && job.url !== '#' ? job.url : null);
@@ -150,7 +151,7 @@ export default function JobCard({ job }: Props) {
       {/* Skills chips for non-recommended */}
       {!job.isRecommended && (
         <div className="flex flex-wrap gap-2">
-          {job.skills.slice(0, 4).map(s => (
+          {skillsArray.slice(0, 4).map(s => (
             <span key={s} className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl text-slate-500" 
               style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
               {s}
